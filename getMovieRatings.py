@@ -35,7 +35,6 @@ def crawlComments(movieCode):
         for c in list(filter(lambda c: c['user_content_action']['rating'], content['result']['result'])):
             localLines.append('__label__' + str(c['user_content_action']['rating']) + ' ' + c['text'].replace('\n', '').replace('\r', ''))
         next_uri = 'https://api.watcha.com' + content['result']['next_uri'] if content['result']['next_uri'] else None
-        # print(next_uri)
     
     taskQueue.put(localLines)
     return
@@ -58,7 +57,6 @@ if __name__ == "__main__":
     with open('movieCodeRandom.txt') as movieCode:
         for l in movieCode.readlines():
             movieCodeSet.append(l.rstrip('\n'))
-
     movieCode.close()
 
     # print(str(int(process.memory_info().rss / 1024 / 1024)) + ' MB')
@@ -66,7 +64,7 @@ if __name__ == "__main__":
     pool = multiprocessing.Pool(processes=cpu_count, initializer=initializer, initargs=(multiprocessing.Queue(), ))
     print('pool size : ' + str(cpu_count))
     pool.apply_async(writer)
-    pool.map_async(crawlComments, movieCodeSet)
+    pool.map_async(crawlComments, list(set(movieCodeSet)))
     pool.close()
     pool.join()
     print('all done')
