@@ -1,5 +1,3 @@
-#-*-coding: utf-8
-
 import multiprocessing
 import sys
 import os
@@ -25,18 +23,21 @@ def crawlComments(movieCode):
         'Postman-Token': "1978cee3-436b-4ea4-a333-93104d50e92b"
     }
     session = requests.Session()
-    next_uri = "https://api.watcha.com/api/contents/" + movieCode + "/comments?filter=all&order=popular&page=1&size=100"
+
+    next_uri = "https://api.watcha.com/api/contents/{0}/comments?filter=all&order=popular&page=1&size=100".format(movieCode)
     while next_uri:
         try:
             content = session.get(next_uri, headers=headers).json()
         except requests.exceptions.RequestException as re:
+            print(re)
             break
 
         for c in list(filter(lambda c: c['user_content_action']['rating'], content['result']['result'])):
-            localLines.append('__label__' + str(c['user_content_action']['rating']) + ' ' + c['text'].replace('\n', '').replace('\r', ''))
-        next_uri = 'https://api.watcha.com' + content['result']['next_uri'] if content['result']['next_uri'] else None
+            localLines.append("__label__{0} {1}".format(c['user_content_action']['rating'], c['text'].replace('\n', '').replace('\r', '')))
+        next_uri = 'https://api.watcha.com{0}'.format(content['result']['next_uri']) if content['result']['next_uri'] else None
     
     taskQueue.put(localLines)
+
     return
 
 def writer():
@@ -57,14 +58,14 @@ if __name__ == "__main__":
     with open('movieCodeRandom.txt') as movieCode:
         for l in movieCode.readlines():
             movieCodeSet.append(l.rstrip('\n'))
-    movieCode.close()
 
     # print(str(int(process.memory_info().rss / 1024 / 1024)) + ' MB')
     cpu_count = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(processes=cpu_count, initializer=initializer, initargs=(multiprocessing.Queue(), ))
-    print('pool size : ' + str(cpu_count))
+    print('pool size : ' + str(cpu_count))  
     pool.apply_async(writer)
     pool.map_async(crawlComments, list(set(movieCodeSet)))
     pool.close()
     pool.join()
+    
     print('all done')

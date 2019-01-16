@@ -1,7 +1,6 @@
 {
-    "code-runner.runInTerminal": true,
     "code-runner.executorMap": {
-        "python": "/usr/local/opt/python/bin/python3.6"
+        "python": "python3 -u"
     },
-    "python.pythonPath": "/usr/local/opt/python/bin/python3.6"
+    "prettier.printWidth": 150,
 }
