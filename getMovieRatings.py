@@ -37,11 +37,10 @@ def crawlComments(movieCode):
 
         localLines = list()
         for c in list(filter(lambda c: c['user_content_action']['rating'], content['result']['result'])):
-            for s in list(filter(lambda f: len(f.strip()), c['text'].splitlines())):
+            for s in list(filter(lambda f: len(f.strip().replace('.', '')) > 1, c['text'].splitlines())):
                 localLines.append("__label__{} {}".format(c['user_content_action']['rating'], s.strip()))
         next_uri = 'https://api.watcha.com{}'.format(content['result']['next_uri']) if content['result']['next_uri'] else None
-
-    taskQueue.put(localLines)
+        taskQueue.put(localLines)
 
     return
 
