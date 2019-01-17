@@ -1,11 +1,13 @@
 import multiprocessing
 import sys
 import os
+import re
+import logging
 import requests
 import time
 
+
 def crawlComments(movieCode):
-    localLines = list()
     headers = {
         'accept': "application/vnd.frograms+json;version=20",
         'accept-encoding': "gzip, deflate, br",
@@ -24,35 +26,46 @@ def crawlComments(movieCode):
     }
     session = requests.Session()
 
-    next_uri = "https://api.watcha.com/api/contents/{0}/comments?filter=all&order=popular&page=1&size=100".format(movieCode)
+    next_uri = "https://api.watcha.com/api/contents/{}/comments?filter=all&order=popular&page=1&size=100".format(movieCode)
+
     while next_uri:
         try:
-            content = session.get(next_uri, headers=headers).json()
+            content = session.get(next_uri, headers=headers, timeout=5).json()
         except requests.exceptions.RequestException as re:
-            print(re)
+            logging.warning("{} --> {}".format(next_uri, re))
             break
 
+        localLines = list()
         for c in list(filter(lambda c: c['user_content_action']['rating'], content['result']['result'])):
-            localLines.append("__label__{0} {1}".format(c['user_content_action']['rating'], c['text'].replace('\n', '').replace('\r', '')))
-        next_uri = 'https://api.watcha.com{0}'.format(content['result']['next_uri']) if content['result']['next_uri'] else None
-    
+            for s in list(filter(lambda f: len(f.strip()), c['text'].splitlines())):
+                localLines.append("__label__{} {}".format(c['user_content_action']['rating'], s.strip()))
+        next_uri = 'https://api.watcha.com{}'.format(content['result']['next_uri']) if content['result']['next_uri'] else None
+
     taskQueue.put(localLines)
 
     return
 
+
 def writer():
-    result = open('result.txt', 'w')
-    while True:
-        lines = taskQueue.get()
-        for l in lines:
-            result.write(l + '\n')
-    result.close()
+    with open('result.txt', 'w') as result:
+        while True:
+            try:
+                lines = taskQueue.get(timeout=10)
+            except:
+                logging.warning('queue empty')
+                break
+            result.writelines('{}\n'.format(re.sub('\s\s+', ' ', l)) for l in lines)
+
 
 def initializer(q):
     global taskQueue
     taskQueue = q
 
+
 if __name__ == "__main__":
+    logging.basicConfig(filename='event.log', level=logging.DEBUG, format='%(asctime)s %(message)s')
+    logging.info('start logging')
+
     movieCodeSet = list()
 
     with open('movieCodeRandom.txt') as movieCode:
@@ -62,10 +75,10 @@ if __name__ == "__main__":
     # print(str(int(process.memory_info().rss / 1024 / 1024)) + ' MB')
     cpu_count = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(processes=cpu_count, initializer=initializer, initargs=(multiprocessing.Queue(), ))
-    print('pool size : ' + str(cpu_count))  
+    print('pool size : ' + str(cpu_count))
     pool.apply_async(writer)
     pool.map_async(crawlComments, list(set(movieCodeSet)))
     pool.close()
     pool.join()
-    
+
     print('all done')
