@@ -1,3 +1,3 @@
-# Watcha Comment Crwaler
+# Watcha Comment Scraper
 
-## 와챠 코멘트 크롤링 하려고 만듬..
+## 와챠 코멘트 스크래핑 하려고 만듬..
